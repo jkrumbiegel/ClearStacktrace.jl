@@ -3,6 +3,9 @@ uuid = "710b7bb7-6527-48f4-8ff2-df22ae1c6308"
 authors = ["Julius Krumbiegel"]
 version = "0.1.0"
 
+[deps]
+Crayons = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
+
 [compat]
 julia = "1"
 

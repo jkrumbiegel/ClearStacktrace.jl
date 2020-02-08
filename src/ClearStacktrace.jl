@@ -2,13 +2,15 @@ module ClearStacktrace
 
 using Crayons
 
-st = try 
-    scene, layout = layoutscene()
-    ax = layout[1, 1] = LAxis(scene)
-    scatter!(ax, rand(100, 4))
-catch e
-    stacktrace(catch_backtrace())
-end
+const COLORS = Ref(Any[:red, :blue, :green, :yellow, :orange, :cyan, :magenta])
+const TYPECOLORS = Ref(Any[0x706060, 0x607060, 0x606080])
+const CRAYON_HEAD = Ref(Crayon(bold = true))
+const CRAYON_HEADSEP = Ref(Crayon(bold = true))
+const CRAYON_FUNCTION = Ref(Crayon())
+const CRAYON_FUNC_EXT = Ref(Crayon(foreground = :dark_gray))
+const CRAYON_LOCATION = Ref(Crayon(foreground = :dark_gray))
+const CRAYON_NUMBER = Ref(Crayon(foreground = :blue))
+
 
 
 function expandbasepath(str)
@@ -31,11 +33,12 @@ getfile(frame) = string(frame.file) |> expandbasepath
 getfunc(frame) = string(frame.func)
 getmodule(frame) = try; string(frame.linfo.def.module) catch; "" end
 
-getsig(frame) = try;  join("::" .* repr.(frame.linfo.specTypes.parameters[2:end]), ", ::") catch; "" end
+getsig(frame) = try;  join("::" .* repr.(frame.linfo.specTypes.parameters[2:end]), ", ") catch; "" end
 getlocation(frame) = string(getfile(frame)) * ":" * string(getline(frame)) |> replaceuserpath
 
 function convert_frame(frame)
     (
+        file = getfile(frame),
         location = getlocation(frame),
         func = getfunc(frame),
         modul = getmodule(frame),
@@ -47,9 +50,8 @@ end
 convert_trace(trace) = convert_frame.(trace)
 
 
-colors = [:red, :blue, :green, :yellow, :orange, :cyan, :magenta];
 
-function printtrace(stacktrace)
+function printtrace(io::IO, stacktrace)
 
     arrframes = convert_trace(stacktrace)
 
@@ -62,75 +64,84 @@ function printtrace(stacktrace)
     funcwidth = maximum(length, funcs_w_ext)
 
     moduls = [x.modul for x in arrframes]
-    modulwidth = maximum(length, moduls)
+
+    modulwidth = max(maximum(length, moduls), length("Module"))
 
     umoduls = setdiff(unique(moduls), [""])
-    ucolors = Dict(u => c for (u, c) in Iterators.zip(umoduls, colors))
+    ucolors = Dict(u => c for (u, c) in Iterators.zip(umoduls, COLORS[]))
 
     locations = [x.location for x in arrframes]
 
     signatures = [x.signature for x in arrframes]
 
-    headcrayon = Crayon(bold = true)
-    print(rpad("", numwidth + 1))
-    # print(headcrayon(rpad("No.", numwidth + 1)))
-    print(headcrayon(rpad("Function", funcwidth + 2)))
-    print(headcrayon(rpad("Module", modulwidth + 2)))
-    print(headcrayon("Signature"))
-    println()
-    # print(headcrayon(rpad("┄┄┄", numwidth + 1)))
-    print(rpad("", numwidth + 1))
-    print(headcrayon(rpad("┄┄┄┄┄┄┄┄", funcwidth + 2)))
-    print(headcrayon(rpad("┄┄┄┄┄┄", modulwidth + 2)))
-    print(headcrayon("┄┄┄┄┄┄┄┄┄"))
-    println()
+    print(io, rpad("", numwidth + 1))
+    # print(io, CRAYON_HEAD[](rpad("No.", numwidth + 1)))
+    print(io, CRAYON_HEAD[](rpad("Function", funcwidth + 2)))
+    print(io, CRAYON_HEAD[](rpad("Module", modulwidth + 2)))
+    print(io, CRAYON_HEAD[]("Signature"))
+    println(io)
+    # print(io, CRAYON_HEAD[](rpad("┄┄┄", numwidth + 1)))
+    print(io, rpad("", numwidth + 1))
+    print(io, CRAYON_HEADSEP[](rpad("┄┄┄┄┄┄┄┄", funcwidth + 2)))
+    print(io, CRAYON_HEADSEP[](rpad("┄┄┄┄┄┄", modulwidth + 2)))
+    print(io, CRAYON_HEADSEP[]("┄┄┄┄┄┄┄┄┄"))
+    println(io)
 
     for (i, (num, func, ext, modul, location, signature)) in enumerate(zip(numbers, funcs, exts, moduls, locations, signatures))
-        ncrayon = Crayon(foreground = :blue)
-        print(ncrayon(rpad(num, numwidth + 1)))
+        print(io, CRAYON_NUMBER(rpad(num, numwidth + 1)))
 
-        fcrayon = Crayon(bold = false)
-        print(fcrayon(func))
+        print(io, CRAYON_FUNCTION[](func))
 
-        extcrayon = Crayon(foreground = :dark_gray)
-        print(extcrayon(ext * (" " ^ (2 + funcwidth - length(funcs_w_ext[i])))))
+        print(io, CRAYON_FUNC_EXT[](ext * (" " ^ (2 + funcwidth - length(funcs_w_ext[i])))))
 
         mcolor = get(ucolors, modul, :white)
         mcrayon = Crayon(foreground = mcolor)
-        print(mcrayon(rpad(modul, modulwidth + 2)))
+        print(io, mcrayon(rpad(modul, modulwidth + 2)))
 
         # sigcrayon = Crayon(foreground = :dark_gray)
-        # print(sigcrayon(signature))
-        highlight_signature_2(signature, [0x607070, 0x706070, 0x707060])
+        # print(io, sigcrayon(signature))
+        print_signature(io, signature, TYPECOLORS[])
         
-        println()
-        loccrayon = Crayon(foreground = :dark_gray)
-        # loccrayon = Crayon(foreground = 0x666666)
-        println(loccrayon(location))
+        println(io)
+        # CRAYON_LOCATION = Crayon(foreground = 0x666666)
+        println(io, CRAYON_LOCATION[](location))
     end
 end
 
-printtrace(st);
-
-
-function highlight_signature_2(sig, colors = [:red, :yellow, :blue])
+function print_signature(io::IO, sig, colors)
     # split before and after curly braces and commas
+
+    if length(colors) != 3
+        error("""
+        Three colors are needed to color a type signature without collisions.
+        You supplied $(length(colors)): $colors
+        """)
+    end
+
+    if isempty(sig)
+        return
+    end
+
     regex = r"(?<=[\{\}\,])|(?=[\{\}\,])"
 
     parts = split(sig, regex)
 
-
+    # pretend that we used two colors already to avoid the edge case
     colorstack = colors[1:2]
 
-    lastbrace = :open
-
+    print(io, Crayon(foreground = :dark_gray)("("))
     for p in parts
         color = nothing
 
         if p == "{"
+            # opening brace has same color as previous word
             color = colorstack[end]
+            # now add the color of the word before that to the end of the stack
+            # so the next chosen color will be neither of these two
             push!(colorstack, colorstack[end-1])
         elseif p == "}"
+            # closing brace gets the color from the previous stack level
+            # remove that one
             pop!(colorstack)
             color = colorstack[end]
         elseif p == ","
@@ -143,8 +154,31 @@ function highlight_signature_2(sig, colors = [:red, :yellow, :blue])
         end
         
         cray = Crayon(foreground = color)
-        print(cray(p))
+        print(io, cray(p))
     end
+    print(io, Crayon(foreground = :dark_gray)(")"))
+end
+
+@warn "Overloading Base.show_backtrace(io::IO, t::Vector) with custom version"
+function Base.show_backtrace(io::IO, t::Vector)
+
+    resize!(Base.LAST_SHOWN_LINE_INFOS, 0)
+    filtered = Base.process_backtrace(t)
+    isempty(filtered) && return
+
+    if length(filtered) == 1 && StackTraces.is_top_level_frame(filtered[1][1])
+        f = filtered[1][1]
+        if f.line == 0 && f.file == Symbol("")
+            # don't show a single top-level frame with no location info
+            return
+        end
+    end
+
+    println(io, "\nStacktrace:")
+
+    frames = first.(filtered)
+
+    printtrace(io, frames)
 
 end
 
