@@ -9,7 +9,7 @@ An experimental package that hooks into `Base.show_backtrace` and replaces norma
 
 Example:
 
-!(screenshot)[https://raw.githubusercontent.com/jkrumbiegel/ClearStacktrace.jl/master/screenshot.png]
+![screenshot](screenshot.png)
 
 Untested on Windows!
 Also not registered, yet.
