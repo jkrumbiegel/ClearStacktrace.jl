@@ -196,5 +196,10 @@ function Base.show_backtrace(io::IO, t::Vector)
     printtrace(io, frames)
 end
 
+# Precompile some methods, to avoid latency at the first call
+
+precompile(Base.show_backtrace, (Vector{Base.StackTraces.StackFrame},))
+precompile(printtrace, (IO, Vector{Any}))
+
 
 end # module
