@@ -12,6 +12,7 @@ Example:
 !(screenshot)[screenshot.png]
 
 Untested on Windows!
+Also not registered, yet.
 
 You can choose different preset colors by changing the const Ref variables like:
 ```julia
