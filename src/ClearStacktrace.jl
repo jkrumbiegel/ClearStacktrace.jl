@@ -2,7 +2,17 @@ module ClearStacktrace
 
 using Crayons
 
-const COLORS = Ref(Any[:blue, :yellow, :red, :green, :orange, :cyan, :magenta])
+const MODULECRAYONS = Ref(
+        [
+            crayon"red",
+            crayon"blue",
+            crayon"yellow",
+            crayon"red",
+            crayon"green",
+            crayon"cyan",
+            crayon"magenta",
+        ]
+)
 const TYPECOLORS = Ref(Any[0x706060, 0x607060, 0x606080])
 const CRAYON_HEAD = Ref(Crayon(bold = true))
 const CRAYON_HEADSEP = Ref(Crayon(bold = true))
@@ -77,7 +87,7 @@ function printtrace(io::IO, stacktrace)
     modulwidth = max(maximum(length, moduls), length("Module"))
 
     umoduls = setdiff(unique(moduls), [""])
-    ucolors = Dict(u => c for (u, c) in Iterators.zip(umoduls, COLORS[]))
+    modcrayons = Dict(u => c for (u, c) in Iterators.zip(umoduls, MODULECRAYONS[]))
 
     # locations = [x.location for x in arrframes]
 
@@ -102,8 +112,7 @@ function printtrace(io::IO, stacktrace)
 
         print(io, CRAYON_FUNC_EXT[](ext * (" " ^ (FUNCPAD[] + funcwidth - length(funcs_w_ext[i])))))
 
-        mcolor = get(ucolors, modul, :white)
-        mcrayon = Crayon(foreground = mcolor)
+        mcrayon = get(modcrayons, modul, crayon"white")
         print(io, mcrayon(rpad(modul, modulwidth + MODULEPAD[])))
 
         # sigcrayon = Crayon(foreground = :dark_gray)
