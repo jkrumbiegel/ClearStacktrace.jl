@@ -4,7 +4,6 @@ using Crayons
 
 const MODULECRAYONS = Ref(
         [
-            crayon"red",
             crayon"blue",
             crayon"yellow",
             crayon"red",
@@ -87,7 +86,8 @@ function printtrace(io::IO, stacktrace)
     modulwidth = max(maximum(length, moduls), length("Module"))
 
     umoduls = setdiff(unique(moduls), [""])
-    modcrayons = Dict(u => c for (u, c) in Iterators.zip(umoduls, MODULECRAYONS[]))
+    modcrayons = Dict(u => c for (u, c) in
+        Iterators.zip(umoduls, Iterators.cycle(MODULECRAYONS[])))
 
     # locations = [x.location for x in arrframes]
 
