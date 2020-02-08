@@ -96,9 +96,9 @@ function printtrace(io::IO, stacktrace)
     println(io)
 
     print(io, rpad("", numwidth + NUMPAD[]))
-    print(io, CRAYON_HEADSEP[](rpad("┄┄┄┄┄┄┄┄", funcwidth + FUNCPAD[])))
-    print(io, CRAYON_HEADSEP[](rpad("┄┄┄┄┄┄", modulwidth + MODULEPAD[])))
-    print(io, CRAYON_HEADSEP[]("┄┄┄┄┄┄┄┄┄"))
+    print(io, CRAYON_HEADSEP[](rpad("────────", funcwidth + FUNCPAD[])))
+    print(io, CRAYON_HEADSEP[](rpad("──────", modulwidth + MODULEPAD[])))
+    print(io, CRAYON_HEADSEP[]("─────────"))
     println(io)
 
     for (i, (num, func, ext, modul, file, line, signature)) in enumerate(
