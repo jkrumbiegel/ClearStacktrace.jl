@@ -89,15 +89,12 @@ function printtrace(io::IO, stacktrace)
     modcrayons = Dict(u => c for (u, c) in
         Iterators.zip(umoduls, Iterators.cycle(MODULECRAYONS[])))
 
-    # locations = [x.location for x in arrframes]
-
     print(io, rpad("", numwidth + NUMPAD[]))
-    # print(io, CRAYON_HEAD[](rpad("No.", numwidth + 1)))
     print(io, CRAYON_HEAD[](rpad("Function", funcwidth + FUNCPAD[])))
     print(io, CRAYON_HEAD[](rpad("Module", modulwidth + MODULEPAD[])))
     print(io, CRAYON_HEAD[]("Signature"))
     println(io)
-    # print(io, CRAYON_HEAD[](rpad("┄┄┄", numwidth + 1)))
+
     print(io, rpad("", numwidth + NUMPAD[]))
     print(io, CRAYON_HEADSEP[](rpad("┄┄┄┄┄┄┄┄", funcwidth + FUNCPAD[])))
     print(io, CRAYON_HEADSEP[](rpad("┄┄┄┄┄┄", modulwidth + MODULEPAD[])))
@@ -115,12 +112,10 @@ function printtrace(io::IO, stacktrace)
         mcrayon = get(modcrayons, modul, crayon"white")
         print(io, mcrayon(rpad(modul, modulwidth + MODULEPAD[])))
 
-        # sigcrayon = Crayon(foreground = :dark_gray)
-        # print(io, sigcrayon(signature))
         print_signature(io, signature, TYPECOLORS[])
         
         println(io)
-        # CRAYON_LOCATION = Crayon(foreground = 0x666666)
+
         println(io, CRAYON_LOCATION[](string(file) * ":" * string(line)))
     end
 end
