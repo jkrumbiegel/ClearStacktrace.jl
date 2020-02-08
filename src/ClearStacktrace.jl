@@ -174,6 +174,7 @@ end
 @warn "Overloading Base.show_backtrace(io::IO, t::Vector) with custom version"
 function Base.show_backtrace(io::IO, t::Vector)
 
+    ### this part is copied from the original function
     resize!(Base.LAST_SHOWN_LINE_INFOS, 0)
     filtered = Base.process_backtrace(t)
     isempty(filtered) && return
@@ -185,13 +186,14 @@ function Base.show_backtrace(io::IO, t::Vector)
             return
         end
     end
+    ###
 
     println(io, "\nStacktrace:")
 
+    # process_backtrace returns a Tuple{Frame, Int}
     frames = first.(filtered)
 
     printtrace(io, frames)
-
 end
 
 
