@@ -7,9 +7,13 @@
 
 An experimental package that hooks into `Base.show_backtrace` and replaces normal StackTrace printing behavior with a clearer version that indicates Modules, uses alignment and Crayon.jl colors to reduce visual clutter and expands base paths so they are clickable.
 
-Example:
+Example with `ClearStacktrace.jl`:
 
-![screenshot](screenshot.png)
+![after](img/after.png)
+
+And the default stacktrace:
+
+![before](img/before.png)
 
 Untested on Windows!
 Also not registered, yet.
