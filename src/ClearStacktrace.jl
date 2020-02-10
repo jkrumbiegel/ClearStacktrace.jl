@@ -22,6 +22,11 @@ const CRAYON_NUMBER = Ref(Crayon(foreground = :blue))
 const NUMPAD = Ref(1)
 const FUNCPAD = Ref(2)
 const MODULEPAD = Ref(2)
+const EXPAND_BASE_PATHS = Ref(true)
+const CONTRACT_USER_DIR = Ref(true)
+const LOCATION_PREFIX = Ref("at: ")
+const DEFAULT_MODULE_CRAYON = Ref(Crayon(foreground = :default))
+const INLINED_SIGN = Ref("[i]")
 
 
 function expandbasepath(str)
@@ -40,7 +45,16 @@ function replaceuserpath(str)
 end
 
 getline(frame) = frame.line
-getfile(frame) = string(frame.file) |> expandbasepath |> replaceuserpath
+function getfile(frame)
+    file = string(frame.file)
+    if EXPAND_BASE_PATHS[]
+        file = expandbasepath(file)
+    end
+    if CONTRACT_USER_DIR[]  
+        file = replaceuserpath(file)
+    end
+    file
+end
 getfunc(frame) = string(frame.func)
 getmodule(frame) = try; string(frame.linfo.def.module) catch; "" end
 
@@ -79,7 +93,7 @@ function printtrace(io::IO, stacktrace)
     numbers = ["[" * string(i) * "]" for i in 1:length(stacktrace)]
     numwidth = maximum(length, numbers)
 
-    exts = [inl ? " [i]" : "" for inl in inlineds]
+    exts = [inl ? " " * INLINED_SIGN[] : "" for inl in inlineds]
     funcs_w_ext = funcs .* exts
     funcwidth = maximum(length, funcs_w_ext)
 
@@ -109,19 +123,18 @@ function printtrace(io::IO, stacktrace)
 
         print(io, CRAYON_FUNC_EXT[](ext * (" " ^ (FUNCPAD[] + funcwidth - length(funcs_w_ext[i])))))
 
-        mcrayon = get(modcrayons, modul, crayon"white")
+        mcrayon = get(modcrayons, modul, DEFAULT_MODULE_CRAYON[])
         print(io, mcrayon(rpad(modul, modulwidth + MODULEPAD[])))
 
         print_signature(io, signature, TYPECOLORS[])
         
         println(io)
 
-        println(io, CRAYON_LOCATION[](string(file) * ":" * string(line)))
+        println(io, CRAYON_LOCATION[](LOCATION_PREFIX[] * string(file) * ":" * string(line)))
     end
 end
 
 function print_signature(io::IO, sig, colors)
-    # split before and after curly braces and commas
 
     if length(colors) != 3
         error("""
@@ -134,6 +147,7 @@ function print_signature(io::IO, sig, colors)
         return
     end
 
+    # split before and after curly braces and commas
     regex = r"(?<=[\{\}\,])|(?=[\{\}\,])"
 
     parts = split(sig, regex)
