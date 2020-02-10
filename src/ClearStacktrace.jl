@@ -27,12 +27,19 @@ const CONTRACT_USER_DIR = Ref(true)
 const LOCATION_PREFIX = Ref("at: ")
 const DEFAULT_MODULE_CRAYON = Ref(Crayon(foreground = :default))
 const INLINED_SIGN = Ref("[i]")
+const REPLACE_BACKSLASHES = Ref(true)
 
 
 function expandbasepath(str)
-    if !isnothing(match(r"^\./\w+\.jl$", str))
+
+    basefileregex = if Sys.iswindows()
+        r"^\.\\\w+\.jl$"
+    else
+        r"^\./\w+\.jl$"
+    end
+
+    if !isnothing(match(basefileregex, str))
         sourcestring = Base.find_source_file(str[3:end]) # cut off ./
-        replace(sourcestring, raw"\\" => '/')
     else
         str
     end
@@ -44,6 +51,10 @@ function replaceuserpath(str)
     replace(str1, lowercasefirst(homedir()) => "~")
 end
 
+function replacebackslashes(str)
+    replace(str, raw"\\" => '/')
+end
+
 getline(frame) = frame.line
 function getfile(frame)
     file = string(frame.file)
@@ -53,6 +64,10 @@ function getfile(frame)
     if CONTRACT_USER_DIR[]  
         file = replaceuserpath(file)
     end
+    if REPLACE_BACKSLASHES[]
+        file = replacebackslashes(file)
+    end
+
     file
 end
 getfunc(frame) = string(frame.func)
