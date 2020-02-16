@@ -217,6 +217,11 @@ function Base.show_backtrace(io::IO, t::Vector)
     end
     ###
 
+    if length(filtered) > Base.BIG_STACKTRACE_SIZE
+        Base.show_reduced_backtrace(IOContext(io, :backtrace => true), filtered, true)
+        return
+    end
+
     println(io, "\nStacktrace:")
 
     # process_backtrace returns a Tuple{Frame, Int}
