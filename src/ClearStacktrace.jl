@@ -12,7 +12,7 @@ const MODULECRAYONS = Ref(
             crayon"magenta",
         ]
 )
-const TYPECOLORS = Ref(Any[0x706060, 0x607060, 0x606080])
+const TYPECOLORS = Ref(Any[239, 241, 243])
 const CRAYON_HEAD = Ref(Crayon(bold = true))
 const CRAYON_HEADSEP = Ref(Crayon(bold = true))
 const CRAYON_FUNCTION = Ref(Crayon())
