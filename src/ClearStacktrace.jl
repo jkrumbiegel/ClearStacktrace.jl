@@ -19,6 +19,7 @@ const CRAYON_FUNCTION = Ref(Crayon())
 const CRAYON_FUNC_EXT = Ref(Crayon(foreground = :dark_gray))
 const CRAYON_LOCATION = Ref(Crayon(foreground = :dark_gray))
 const CRAYON_NUMBER = Ref(Crayon(foreground = :blue))
+const CRAYON_HIDDEN_CHARS = Ref(Crayon(foreground = 131))
 const NUMPAD = Ref(1)
 const FUNCPAD = Ref(2)
 const MODULEPAD = Ref(2)
@@ -28,6 +29,8 @@ const LOCATION_PREFIX = Ref("at: ")
 const DEFAULT_MODULE_CRAYON = Ref(Crayon(foreground = :default))
 const INLINED_SIGN = Ref("[i]")
 const REPLACE_BACKSLASHES = Ref(true)
+const _LAST_CONVERTED_TRACE = Ref{Any}(nothing)
+const MAX_SIGNATURE_CHARS = Ref(200)
 
 
 function expandbasepath(str)
@@ -101,11 +104,11 @@ end
 
 
 
-function printtrace(io::IO, stacktrace)
+function printtrace(io::IO, converted_stacktrace; maxsigchars = MAX_SIGNATURE_CHARS[])
 
-    files, lines, funcs, moduls, signatures, inlineds = convert_trace(stacktrace)
+    files, lines, funcs, moduls, signatures, inlineds = converted_stacktrace
 
-    numbers = ["[" * string(i) * "]" for i in 1:length(stacktrace)]
+    numbers = ["[" * string(i) * "]" for i in 1:length(files)]
     numwidth = maximum(length, numbers)
 
     exts = [inl ? " " * INLINED_SIGN[] : "" for inl in inlineds]
@@ -141,7 +144,7 @@ function printtrace(io::IO, stacktrace)
         mcrayon = get(modcrayons, modul, DEFAULT_MODULE_CRAYON[])
         print(io, mcrayon(rpad(modul, modulwidth + MODULEPAD[])))
 
-        print_signature(io, signature, TYPECOLORS[])
+        print_signature(io, signature, TYPECOLORS[], maxsigchars)
         
         println(io)
 
@@ -149,7 +152,7 @@ function printtrace(io::IO, stacktrace)
     end
 end
 
-function print_signature(io::IO, sig, colors)
+function print_signature(io::IO, sig, colors, maxsigchars)
 
     if length(colors) != 3
         error("""
@@ -157,6 +160,11 @@ function print_signature(io::IO, sig, colors)
         You supplied $(length(colors)): $colors
         """)
     end
+
+    nchars = length(sig)
+    n_hidden_characters = max(length(sig) - maxsigchars, 0)
+    
+    sig = chop(sig, head = 0, tail = n_hidden_characters)
 
     if isempty(sig)
         return
@@ -197,6 +205,9 @@ function print_signature(io::IO, sig, colors)
         cray = Crayon(foreground = color)
         print(io, cray(p))
     end
+    if n_hidden_characters > 0
+        print(io, CRAYON_HIDDEN_CHARS[](" ...$n_hidden_characters+"))
+    end
     print(io, Crayon(foreground = :dark_gray)(")"))
 end
 
@@ -227,7 +238,17 @@ function Base.show_backtrace(io::IO, t::Vector)
     # process_backtrace returns a Tuple{Frame, Int}
     frames = first.(filtered)
 
-    printtrace(io, frames)
+    converted_stacktrace = convert_trace(frames)
+    _LAST_CONVERTED_TRACE[] = converted_stacktrace
+
+    printtrace(io, converted_stacktrace)
+end
+
+function reprint_last(; full = true)
+    if !isnothing(_LAST_CONVERTED_TRACE[])
+        printtrace(stdout, _LAST_CONVERTED_TRACE[];
+            maxsigchars = full ? typemax(Int) : MAX_SIGNATURE_CHARS[])
+    end
 end
 
 
