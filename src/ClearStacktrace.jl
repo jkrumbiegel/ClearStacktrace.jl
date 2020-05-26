@@ -12,7 +12,7 @@ const MODULECRAYONS = Ref(
             crayon"magenta",
         ]
 )
-const TYPECOLORS = Ref(Any[239, 241, 243])
+const TYPECOLORS = Ref(Any[:dark_gray, :dark_gray, :dark_gray])
 const CRAYON_HEAD = Ref(Crayon(bold = true))
 const CRAYON_HEADSEP = Ref(Crayon(bold = true))
 const CRAYON_FUNCTION = Ref(Crayon())
@@ -144,71 +144,23 @@ function printtrace(io::IO, converted_stacktrace; maxsigchars = MAX_SIGNATURE_CH
         mcrayon = get(modcrayons, modul, DEFAULT_MODULE_CRAYON[])
         print(io, mcrayon(rpad(modul, modulwidth + MODULEPAD[])))
 
-        print_signature(io, signature, TYPECOLORS[], maxsigchars)
-        
+        print_signature(io, signature)
+
         println(io)
 
         println(io, CRAYON_LOCATION[](LOCATION_PREFIX[] * string(file) * ":" * string(line)))
     end
 end
 
-function print_signature(io::IO, sig, colors, maxsigchars)
-
-    if length(colors) != 3
-        error("""
-        Three colors are needed to color a type signature without collisions.
-        You supplied $(length(colors)): $colors
-        """)
-    end
-
-    nchars = length(sig)
-    n_hidden_characters = max(length(sig) - maxsigchars, 0)
-    
-    sig = chop(sig, head = 0, tail = n_hidden_characters)
-
-    if isempty(sig)
-        return
-    end
-
-    # split before and after curly braces and commas
-    regex = r"(?<=[\{\}\,])|(?=[\{\}\,])"
-
-    parts = split(sig, regex)
-
-    # pretend that we used two colors already to avoid the edge case
-    colorstack = colors[1:2]
-
-    print(io, Crayon(foreground = :dark_gray)("("))
-    for p in parts
-        color = nothing
-
-        if p == "{"
-            # opening brace has same color as previous word
-            color = colorstack[end]
-            # now add the color of the word before that to the end of the stack
-            # so the next chosen color will be neither of these two
-            push!(colorstack, colorstack[end-1])
-        elseif p == "}"
-            # closing brace gets the color from the previous stack level
-            # remove that one
-            pop!(colorstack)
-            color = colorstack[end]
-        elseif p == ","
-            color = :dark_gray
-        else
-            # change color for every element, choose not the last two ones
-            color = setdiff(colors, colorstack[end-1:end])[1]
-            # then change the last color to the current ones
-            colorstack[end] = color
+function print_signature(io::IO, signature)
+    # print each :: from the signature in white and the rest in dark gray
+    for part in split(signature, "::")
+        if isempty(part)
+            continue
         end
-        
-        cray = Crayon(foreground = color)
-        print(io, cray(p))
+        print(io, "::")
+        print(io, Crayon(foreground = :dark_gray)(part))
     end
-    if n_hidden_characters > 0
-        print(io, CRAYON_HIDDEN_CHARS[](" ...$n_hidden_characters+"))
-    end
-    print(io, Crayon(foreground = :dark_gray)(")"))
 end
 
 @warn "Overloading Base.show_backtrace(io::IO, t::Vector) with custom version"
