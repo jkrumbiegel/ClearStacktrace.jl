@@ -18,7 +18,7 @@ const CRAYON_HEADSEP = Ref(Crayon(bold = true))
 const CRAYON_FUNCTION = Ref(Crayon())
 const CRAYON_FUNC_EXT = Ref(Crayon(foreground = :dark_gray))
 const CRAYON_LOCATION = Ref(Crayon(foreground = :dark_gray))
-const CRAYON_NUMBER = Ref(Crayon(foreground = :blue))
+const CRAYON_NUMBER = Ref(Crayon(foreground = :dark_gray))
 const CRAYON_HIDDEN_CHARS = Ref(Crayon(foreground = 131))
 const NUMPAD = Ref(1)
 const FUNCPAD = Ref(2)
@@ -108,6 +108,7 @@ function printtrace(io::IO, converted_stacktrace; maxsigchars = MAX_SIGNATURE_CH
 
     files, lines, funcs, moduls, signatures, inlineds = converted_stacktrace
 
+    # numbers = ["[" * string(i) * "]" for i in 1:length(files)]
     numbers = ["[" * string(i) * "]" for i in 1:length(files)]
     numwidth = maximum(length, numbers)
 
@@ -121,34 +122,50 @@ function printtrace(io::IO, converted_stacktrace; maxsigchars = MAX_SIGNATURE_CH
     modcrayons = Dict(u => c for (u, c) in
         Iterators.zip(umoduls, Iterators.cycle(MODULECRAYONS[])))
 
-    print(io, rpad("", numwidth + NUMPAD[]))
-    print(io, CRAYON_HEAD[](rpad("Function", funcwidth + FUNCPAD[])))
-    print(io, CRAYON_HEAD[](rpad("Module", modulwidth + MODULEPAD[])))
-    print(io, CRAYON_HEAD[]("Signature"))
-    println(io)
+    # print(io, rpad("", numwidth + NUMPAD[]))
+    # print(io, CRAYON_HEAD[](rpad("Module", modulwidth + MODULEPAD[])))
+    # print(io, CRAYON_HEAD[](rpad("Function", funcwidth + FUNCPAD[])))
+    # print(io, CRAYON_HEAD[]("Signature"))
+    # println(io)
 
-    print(io, rpad("", numwidth + NUMPAD[]))
-    print(io, CRAYON_HEADSEP[](rpad("────────", funcwidth + FUNCPAD[])))
-    print(io, CRAYON_HEADSEP[](rpad("──────", modulwidth + MODULEPAD[])))
-    print(io, CRAYON_HEADSEP[]("─────────"))
-    println(io)
+    # print(io, rpad("", numwidth + NUMPAD[]))
+    # print(io, CRAYON_HEADSEP[](rpad("──────", modulwidth + MODULEPAD[])))
+    # print(io, CRAYON_HEADSEP[](rpad("────────", funcwidth + FUNCPAD[])))
+    # print(io, CRAYON_HEADSEP[]("─────────"))
+    # println(io)
 
     for (i, (num, func, ext, modul, file, line, signature)) in enumerate(
             zip(numbers, funcs, exts, moduls, files, lines, signatures))
-        print(io, CRAYON_NUMBER[](rpad(num, numwidth + NUMPAD[])))
 
-        print(io, CRAYON_FUNCTION[](func))
+        modulecrayon = get(modcrayons, modul, DEFAULT_MODULE_CRAYON[])
 
-        print(io, CRAYON_FUNC_EXT[](ext * (" " ^ (FUNCPAD[] + funcwidth - length(funcs_w_ext[i])))))
-
-        mcrayon = get(modcrayons, modul, DEFAULT_MODULE_CRAYON[])
-        print(io, mcrayon(rpad(modul, modulwidth + MODULEPAD[])))
-
+        # print(io, Crayon(foreground = :default)(rpad(num, numwidth + NUMPAD[])))
+        # print(io, modulecrayon(rpad(num, numwidth + NUMPAD[])))
+        print(io, modulecrayon(num * " "))
+        
+        
+        print(io, func)
+        print(io, CRAYON_FUNC_EXT[](ext * " "))
+        # print(io, CRAYON_FUNC_EXT[](ext * (" " ^ (FUNCPAD[] + funcwidth - length(funcs_w_ext[i])))))
+        
+        print(io, Crayon(foreground = :dark_gray)("("))
         print_signature(io, signature)
-
+        print(io, Crayon(foreground = :dark_gray)(")"))
+        
         println(io)
+        
+        # print(io, Crayon(foreground = :dark_gray)("In "))
+        # print(io, modulecrayon(modul * " "))
+        !isempty(modul) && print(io, Crayon(foreground = :dark_gray)("in " * modul * " at "))
 
-        println(io, CRAYON_LOCATION[](LOCATION_PREFIX[] * string(file) * ":" * string(line)))
+        pathparts = splitpath(file)
+        for p in pathparts[1:end-1]
+            print(io, Crayon(foreground = :dark_gray)(p * "/"))
+        end
+        print(io, modulecrayon(pathparts[end]))
+        print(io, Crayon(foreground = :dark_gray)(":" * string(line)))
+        println(io)
+        # println(io, CRAYON_LOCATION[]("at " * string(file) * ":" * string(line)))
     end
 end
 
