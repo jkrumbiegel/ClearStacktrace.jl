@@ -1,8 +1,7 @@
 module ClearStacktrace
 
 
-MODULECOLORS = [:light_blue, :light_yellow, :light_green, :light_magenta, :light_cyan, 
-:light_red, :blue, :yellow, :green, :magenta, :cyan, :red]
+MODULECOLORS = [:light_blue, :light_yellow, :light_red, :light_green, :light_magenta, :light_cyan, :blue, :yellow, :red, :green, :magenta, :cyan]
 
 const EXPAND_BASE_PATHS = Ref(true)
 const CONTRACT_USER_DIR = Ref(true)
