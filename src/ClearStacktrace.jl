@@ -1,37 +1,11 @@
 module ClearStacktrace
 
-using Crayons
 
-const MODULECRAYONS = Ref(
-        [
-            crayon"blue",
-            crayon"yellow",
-            crayon"red",
-            crayon"green",
-            crayon"cyan",
-            crayon"magenta",
-        ]
-)
-const TYPECOLORS = Ref(Any[239, 241, 243])
-const CRAYON_HEAD = Ref(Crayon(bold = true))
-const CRAYON_HEADSEP = Ref(Crayon(bold = true))
-const CRAYON_FUNCTION = Ref(Crayon())
-const CRAYON_FUNC_EXT = Ref(Crayon(foreground = :dark_gray))
-const CRAYON_LOCATION = Ref(Crayon(foreground = :dark_gray))
-const CRAYON_NUMBER = Ref(Crayon(foreground = :blue))
-const CRAYON_HIDDEN_CHARS = Ref(Crayon(foreground = 131))
-const NUMPAD = Ref(1)
-const FUNCPAD = Ref(2)
-const MODULEPAD = Ref(2)
+const MODULECOLORS = [:light_blue, :light_yellow, :light_red, :light_green, :light_magenta, :light_cyan, :blue, :yellow, :red, :green, :magenta, :cyan]
+
 const EXPAND_BASE_PATHS = Ref(true)
 const CONTRACT_USER_DIR = Ref(true)
-const LOCATION_PREFIX = Ref("at: ")
-const DEFAULT_MODULE_CRAYON = Ref(Crayon(foreground = :default))
-const INLINED_SIGN = Ref("[i]")
 const REPLACE_BACKSLASHES = Ref(true)
-const _LAST_CONVERTED_TRACE = Ref{Any}(nothing)
-const MAX_SIGNATURE_CHARS = Ref(200)
-
 
 function expandbasepath(str)
 
@@ -76,15 +50,33 @@ end
 getfunc(frame) = string(frame.func)
 getmodule(frame) = try; string(frame.linfo.def.module) catch; "" end
 
-getsig(frame) = try;  join("::" .* repr.(frame.linfo.specTypes.parameters[2:end]), ", ") catch; "" end
+getsigtypes(frame) = try;  frame.linfo.specTypes.parameters[2:end] catch; "" end
 
 
 function convert_trace(trace)
     files = getfile.(trace)
     lines = getline.(trace)
+
+    methodss = map(trace) do t
+        try
+            t.linfo.def
+        catch
+            nothing
+        end
+    end
+
+    arguments = map(methodss) do m
+        if isnothing(m)
+            []
+        else
+            tv, decls, file, line = Base.arg_decl_parts(m)
+            decls[2:end]
+        end
+    end
+
     funcs = getfunc.(trace)
     moduls = getmodule.(trace)
-    signatures = getsig.(trace)
+    sigtypes = getsigtypes.(trace)
     inlineds = getfield.(trace, :inlined)
 
     # replace empty modules if there is another frame from the same file
@@ -99,117 +91,84 @@ function convert_trace(trace)
     end
 
     (files = files, lines = lines, funcs = funcs,
-        moduls = moduls, signatures = signatures, inlineds = inlineds)
+        moduls = moduls, sigtypes = sigtypes, inlineds = inlineds, arguments = arguments)
 end
 
 
 
-function printtrace(io::IO, converted_stacktrace; maxsigchars = MAX_SIGNATURE_CHARS[])
+function printtrace(io::IO, converted_stacktrace)
 
-    files, lines, funcs, moduls, signatures, inlineds = converted_stacktrace
+    files, lines, funcs, moduls, sigtypes, inlineds, arguments = converted_stacktrace
 
-    numbers = ["[" * string(i) * "]" for i in 1:length(files)]
-    numwidth = maximum(length, numbers)
+    n = length(files)
+    ndigits = length(digits(n))
+    length_numstr = ndigits + 2
 
-    exts = [inl ? " " * INLINED_SIGN[] : "" for inl in inlineds]
-    funcs_w_ext = funcs .* exts
-    funcwidth = maximum(length, funcs_w_ext)
+    uniquemodules = setdiff(unique(moduls), [""])
+    modulecolors = Dict(u => c for (u, c) in
+        Iterators.zip(uniquemodules, Iterators.cycle(MODULECOLORS)))
 
-    modulwidth = max(maximum(length, moduls), length("Module"))
+    for (i, (func, inlined, modul, file, line, stypes, args)) in enumerate(
+            zip(funcs, inlineds, moduls, files, lines, sigtypes, arguments))
 
-    umoduls = setdiff(unique(moduls), [""])
-    modcrayons = Dict(u => c for (u, c) in
-        Iterators.zip(umoduls, Iterators.cycle(MODULECRAYONS[])))
-
-    print(io, rpad("", numwidth + NUMPAD[]))
-    print(io, CRAYON_HEAD[](rpad("Function", funcwidth + FUNCPAD[])))
-    print(io, CRAYON_HEAD[](rpad("Module", modulwidth + MODULEPAD[])))
-    print(io, CRAYON_HEAD[]("Signature"))
-    println(io)
-
-    print(io, rpad("", numwidth + NUMPAD[]))
-    print(io, CRAYON_HEADSEP[](rpad("────────", funcwidth + FUNCPAD[])))
-    print(io, CRAYON_HEADSEP[](rpad("──────", modulwidth + MODULEPAD[])))
-    print(io, CRAYON_HEADSEP[]("─────────"))
-    println(io)
-
-    for (i, (num, func, ext, modul, file, line, signature)) in enumerate(
-            zip(numbers, funcs, exts, moduls, files, lines, signatures))
-        print(io, CRAYON_NUMBER[](rpad(num, numwidth + NUMPAD[])))
-
-        print(io, CRAYON_FUNCTION[](func))
-
-        print(io, CRAYON_FUNC_EXT[](ext * (" " ^ (FUNCPAD[] + funcwidth - length(funcs_w_ext[i])))))
-
-        mcrayon = get(modcrayons, modul, DEFAULT_MODULE_CRAYON[])
-        print(io, mcrayon(rpad(modul, modulwidth + MODULEPAD[])))
-
-        print_signature(io, signature, TYPECOLORS[], maxsigchars)
-        
+        modulecolor = get(modulecolors, modul, :default)
+        print_frame(io, i, func, inlined, modul, file, line, stypes, args, length_numstr, modulecolor)
         println(io)
-
-        println(io, CRAYON_LOCATION[](LOCATION_PREFIX[] * string(file) * ":" * string(line)))
+        println(io)
     end
 end
 
-function print_signature(io::IO, sig, colors, maxsigchars)
+function print_frame(io, i, func, inlined, modul, file, line, stypes,
+        args, length_numstr, modulecolor)
 
-    if length(colors) != 3
-        error("""
-        Three colors are needed to color a type signature without collisions.
-        You supplied $(length(colors)): $colors
-        """)
-    end
-
-    nchars = length(sig)
-    n_hidden_characters = max(length(sig) - maxsigchars, 0)
+    # frame number
+    print(io, lpad("[" * string(i) * "]", length_numstr))
+    print(io, " ")
     
-    sig = chop(sig, head = 0, tail = n_hidden_characters)
+    # function name
+    printstyled(io, func, bold = true)
+   
+    # type signature
+    printstyled(io, "(", color = :light_black)
 
-    if isempty(sig)
-        return
-    end
-
-    # split before and after curly braces and commas
-    regex = r"(?<=[\{\}\,])|(?=[\{\}\,])"
-
-    parts = split(sig, regex)
-
-    # pretend that we used two colors already to avoid the edge case
-    colorstack = colors[1:2]
-
-    print(io, Crayon(foreground = :dark_gray)("("))
-    for p in parts
-        color = nothing
-
-        if p == "{"
-            # opening brace has same color as previous word
-            color = colorstack[end]
-            # now add the color of the word before that to the end of the stack
-            # so the next chosen color will be neither of these two
-            push!(colorstack, colorstack[end-1])
-        elseif p == "}"
-            # closing brace gets the color from the previous stack level
-            # remove that one
-            pop!(colorstack)
-            color = colorstack[end]
-        elseif p == ","
-            color = :dark_gray
-        else
-            # change color for every element, choose not the last two ones
-            color = setdiff(colors, colorstack[end-1:end])[1]
-            # then change the last color to the current ones
-            colorstack[end] = color
+    i = 1
+    for (stype, (varname, vartype)) in zip(stypes, args)
+        if i > 1
+            printstyled(io, ", ", color = :light_black)
         end
-        
-        cray = Crayon(foreground = color)
-        print(io, cray(p))
+        printstyled(io, string(varname), color = :light_black, bold = true)
+        printstyled(io, "::")
+        printstyled(io, string(stype), color = :light_black)
+        i += 1
     end
-    if n_hidden_characters > 0
-        print(io, CRAYON_HIDDEN_CHARS[](" ...$n_hidden_characters+"))
+
+    printstyled(io, ")", color = :light_black)
+
+    println(io)
+    
+    # @
+    printstyled(io, " " ^ (length_numstr - 1) * "@ ", color = :light_black)
+
+    # module
+    if !isempty(modul)
+        printstyled(io, modul, color = modulecolor)
+        print(io, " ")
     end
-    print(io, Crayon(foreground = :dark_gray)(")"))
+
+    # filepath
+    pathparts = splitpath(file)
+    for p in pathparts[1:end-1]
+        printstyled(io, p * "/", color = :light_black)
+    end
+
+    # filename, separator, line
+    # bright black (90) and underlined (4)
+    print(io, "\033[90;4m$(pathparts[end] * ":" * string(line))\033[0m")
+
+    # inlined
+    printstyled(io, inlined ? "[i]" : "", color = :light_black)
 end
+
 
 @warn "Overloading Base.show_backtrace(io::IO, t::Vector) with custom version"
 function Base.show_backtrace(io::IO, t::Vector)
@@ -239,17 +198,10 @@ function Base.show_backtrace(io::IO, t::Vector)
     frames = first.(filtered)
 
     converted_stacktrace = convert_trace(frames)
-    _LAST_CONVERTED_TRACE[] = converted_stacktrace
 
     printtrace(io, converted_stacktrace)
 end
 
-function reprint_last(; full = true)
-    if !isnothing(_LAST_CONVERTED_TRACE[])
-        printtrace(stdout, _LAST_CONVERTED_TRACE[];
-            maxsigchars = full ? typemax(Int) : MAX_SIGNATURE_CHARS[])
-    end
-end
 
 
 end # module
