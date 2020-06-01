@@ -1,7 +1,5 @@
 module ClearStacktrace
 
-using Crayons
-
 const MODULECRAYONS = Ref(
         [
             crayon"blue",
@@ -12,26 +10,15 @@ const MODULECRAYONS = Ref(
             crayon"magenta",
         ]
 )
-const TYPECOLORS = Ref(Any[:dark_gray, :dark_gray, :dark_gray])
-const CRAYON_HEAD = Ref(Crayon(bold = true))
-const CRAYON_HEADSEP = Ref(Crayon(bold = true))
-const CRAYON_FUNCTION = Ref(Crayon())
-const CRAYON_FUNC_EXT = Ref(Crayon(foreground = :dark_gray))
-const CRAYON_LOCATION = Ref(Crayon(foreground = :dark_gray))
-const CRAYON_NUMBER = Ref(Crayon(foreground = :dark_gray))
-const CRAYON_HIDDEN_CHARS = Ref(Crayon(foreground = 131))
-const NUMPAD = Ref(1)
-const FUNCPAD = Ref(2)
-const MODULEPAD = Ref(2)
+
+MODULECOLORS = [:light_blue, :light_yellow, :light_green, :light_magenta, :light_cyan, 
+:light_red, :blue, :yellow, :green, :magenta, :cyan, :red]
+
 const EXPAND_BASE_PATHS = Ref(true)
 const CONTRACT_USER_DIR = Ref(true)
-const LOCATION_PREFIX = Ref("at: ")
-const DEFAULT_MODULE_CRAYON = Ref(Crayon(foreground = :default))
-const INLINED_SIGN = Ref("[i]")
 const REPLACE_BACKSLASHES = Ref(true)
 const _LAST_CONVERTED_TRACE = Ref{Any}(nothing)
 const MAX_SIGNATURE_CHARS = Ref(200)
-
 
 function expandbasepath(str)
 
@@ -76,15 +63,33 @@ end
 getfunc(frame) = string(frame.func)
 getmodule(frame) = try; string(frame.linfo.def.module) catch; "" end
 
-getsig(frame) = try;  join("::" .* repr.(frame.linfo.specTypes.parameters[2:end]), ", ") catch; "" end
+getsigtypes(frame) = try;  frame.linfo.specTypes.parameters[2:end] catch; "" end
 
 
 function convert_trace(trace)
     files = getfile.(trace)
     lines = getline.(trace)
+
+    methodss = map(trace) do t
+        try
+            t.linfo.def
+        catch
+            nothing
+        end
+    end
+
+    arguments = map(methodss) do m
+        if isnothing(m)
+            []
+        else
+            tv, decls, file, line = Base.arg_decl_parts(m)
+            decls[2:end]
+        end
+    end
+
     funcs = getfunc.(trace)
     moduls = getmodule.(trace)
-    signatures = getsig.(trace)
+    sigtypes = getsigtypes.(trace)
     inlineds = getfield.(trace, :inlined)
 
     # replace empty modules if there is another frame from the same file
@@ -99,86 +104,76 @@ function convert_trace(trace)
     end
 
     (files = files, lines = lines, funcs = funcs,
-        moduls = moduls, signatures = signatures, inlineds = inlineds)
+        moduls = moduls, sigtypes = sigtypes, inlineds = inlineds, arguments = arguments)
 end
 
 
 
 function printtrace(io::IO, converted_stacktrace; maxsigchars = MAX_SIGNATURE_CHARS[])
 
-    files, lines, funcs, moduls, signatures, inlineds = converted_stacktrace
+    files, lines, funcs, moduls, sigtypes, inlineds, arguments = converted_stacktrace
 
-    # numbers = ["[" * string(i) * "]" for i in 1:length(files)]
-    numbers = ["[" * string(i) * "]" for i in 1:length(files)]
+    numbers = [string(i) for i in 1:length(files)]
     numwidth = maximum(length, numbers)
+    numbrackets = [lpad("[" * num, numwidth + 1) * "]" for num in numbers]
 
-    exts = [inl ? " " * INLINED_SIGN[] : "" for inl in inlineds]
+    exts = [inl ? " [i]" : "" for inl in inlineds]
     funcs_w_ext = funcs .* exts
-    funcwidth = maximum(length, funcs_w_ext)
 
-    modulwidth = max(maximum(length, moduls), length("Module"))
+    uniquemodules = setdiff(unique(moduls), [""])
+    modulecolors = Dict(u => c for (u, c) in
+        Iterators.zip(uniquemodules, Iterators.cycle(MODULECOLORS)))
 
-    umoduls = setdiff(unique(moduls), [""])
-    modcrayons = Dict(u => c for (u, c) in
-        Iterators.zip(umoduls, Iterators.cycle(MODULECRAYONS[])))
+    for (i, (num, func, ext, modul, file, line, stypes, args)) in enumerate(
+            zip(numbrackets, funcs, exts, moduls, files, lines, sigtypes, arguments))
 
-    # print(io, rpad("", numwidth + NUMPAD[]))
-    # print(io, CRAYON_HEAD[](rpad("Module", modulwidth + MODULEPAD[])))
-    # print(io, CRAYON_HEAD[](rpad("Function", funcwidth + FUNCPAD[])))
-    # print(io, CRAYON_HEAD[]("Signature"))
-    # println(io)
+        modulecolor = get(modulecolors, modul, :default)
 
-    # print(io, rpad("", numwidth + NUMPAD[]))
-    # print(io, CRAYON_HEADSEP[](rpad("──────", modulwidth + MODULEPAD[])))
-    # print(io, CRAYON_HEADSEP[](rpad("────────", funcwidth + FUNCPAD[])))
-    # print(io, CRAYON_HEADSEP[]("─────────"))
-    # println(io)
-
-    for (i, (num, func, ext, modul, file, line, signature)) in enumerate(
-            zip(numbers, funcs, exts, moduls, files, lines, signatures))
-
-        modulecrayon = get(modcrayons, modul, DEFAULT_MODULE_CRAYON[])
-
-        # print(io, Crayon(foreground = :default)(rpad(num, numwidth + NUMPAD[])))
-        # print(io, modulecrayon(rpad(num, numwidth + NUMPAD[])))
-        print(io, modulecrayon(num * " "))
+        print(io, num)
+        print(io, " ")
         
+        printstyled(io, func, bold = true)
         
-        print(io, func)
-        print(io, CRAYON_FUNC_EXT[](ext * " "))
-        # print(io, CRAYON_FUNC_EXT[](ext * (" " ^ (FUNCPAD[] + funcwidth - length(funcs_w_ext[i])))))
-        
-        print(io, Crayon(foreground = :dark_gray)("("))
-        print_signature(io, signature)
-        print(io, Crayon(foreground = :dark_gray)(")"))
-        
+        printstyled(io, "(", color = :light_black)
+
+        i = 1
+        for (stype, (varname, vartype)) in zip(stypes, args)
+            if i > 1
+                printstyled(io, ", ", color = :light_black)
+            end
+            printstyled(io, string(varname), color = :light_black, bold = true)
+            printstyled(io, "::")
+            printstyled(io, string(stype), color = :light_black)
+            i += 1
+        end
+
+        printstyled(io, ")", color = :light_black)
+
         println(io)
         
-        # print(io, Crayon(foreground = :dark_gray)("In "))
-        # print(io, modulecrayon(modul * " "))
-        !isempty(modul) && print(io, Crayon(foreground = :dark_gray)("in " * modul * " at "))
+        if !isempty(modul)
+            printstyled(io, " " ^ (length(num)-1) * "@ ", color = :light_black)
+        end
+        !isempty(modul) && printstyled(io, modul, color = modulecolor)
+
+        print(io, " ")
 
         pathparts = splitpath(file)
         for p in pathparts[1:end-1]
-            print(io, Crayon(foreground = :dark_gray)(p * "/"))
+            printstyled(io, p * "/", color = :light_black)
         end
-        print(io, modulecrayon(pathparts[end]))
-        print(io, Crayon(foreground = :dark_gray)(":" * string(line)))
+
+        printstyled(io, pathparts[end], color = :light_black, bold = true)
+        printstyled(io, ":", color = :light_black)
+        printstyled(io, string(line), color = :light_black, bold = true)
+
+        printstyled(io, ext, color = :light_black)
+
         println(io)
-        # println(io, CRAYON_LOCATION[]("at " * string(file) * ":" * string(line)))
+        println(io)
     end
 end
 
-function print_signature(io::IO, signature)
-    # print each :: from the signature in white and the rest in dark gray
-    for part in split(signature, "::")
-        if isempty(part)
-            continue
-        end
-        print(io, "::")
-        print(io, Crayon(foreground = :dark_gray)(part))
-    end
-end
 
 @warn "Overloading Base.show_backtrace(io::IO, t::Vector) with custom version"
 function Base.show_backtrace(io::IO, t::Vector)
