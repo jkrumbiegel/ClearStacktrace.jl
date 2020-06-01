@@ -1,12 +1,11 @@
 module ClearStacktrace
 
 
-MODULECOLORS = [:light_blue, :light_yellow, :light_red, :light_green, :light_magenta, :light_cyan, :blue, :yellow, :red, :green, :magenta, :cyan]
+const MODULECOLORS = [:light_blue, :light_yellow, :light_red, :light_green, :light_magenta, :light_cyan, :blue, :yellow, :red, :green, :magenta, :cyan]
 
 const EXPAND_BASE_PATHS = Ref(true)
 const CONTRACT_USER_DIR = Ref(true)
 const REPLACE_BACKSLASHES = Ref(true)
-const _LAST_CONVERTED_TRACE = Ref{Any}(nothing)
 
 function expandbasepath(str)
 
@@ -199,16 +198,10 @@ function Base.show_backtrace(io::IO, t::Vector)
     frames = first.(filtered)
 
     converted_stacktrace = convert_trace(frames)
-    _LAST_CONVERTED_TRACE[] = converted_stacktrace
 
     printtrace(io, converted_stacktrace)
 end
 
-function reprint_last(; full = true)
-    if !isnothing(_LAST_CONVERTED_TRACE[])
-        printtrace(stdout, _LAST_CONVERTED_TRACE[])
-    end
-end
 
 
 end # module
