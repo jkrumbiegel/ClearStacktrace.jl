@@ -102,26 +102,27 @@ function printtrace(io::IO, converted_stacktrace)
 
     files, lines, funcs, moduls, sigtypes, inlineds, arguments = converted_stacktrace
 
-    numbers = [string(i) for i in 1:length(files)]
-    numwidth = maximum(length, numbers)
-    numbrackets = [lpad("[" * num, numwidth + 1) * "]" for num in numbers]
-
-    exts = [inl ? " [i]" : "" for inl in inlineds]
+    n = length(files)
+    ndigits = length(digits(n))
+    length_numstr = ndigits + 2
 
     uniquemodules = setdiff(unique(moduls), [""])
     modulecolors = Dict(u => c for (u, c) in
         Iterators.zip(uniquemodules, Iterators.cycle(MODULECOLORS)))
 
-    for (i, (num, func, ext, modul, file, line, stypes, args)) in enumerate(
-            zip(numbrackets, funcs, exts, moduls, files, lines, sigtypes, arguments))
+    for (i, (func, inlined, modul, file, line, stypes, args)) in enumerate(
+            zip(funcs, inlineds, moduls, files, lines, sigtypes, arguments))
 
         modulecolor = get(modulecolors, modul, :default)
 
-        print(io, num)
+        # frame number
+        print(io, lpad("[" * string(i) * "]", length_numstr))
         print(io, " ")
         
+        # function name
         printstyled(io, func, bold = true)
-        
+       
+        # type signature
         printstyled(io, "(", color = :light_black)
 
         i = 1
@@ -139,23 +140,27 @@ function printtrace(io::IO, converted_stacktrace)
 
         println(io)
         
-        printstyled(io, " " ^ (length(num) - 1) * "@ ", color = :light_black)
+        # @
+        printstyled(io, " " ^ (length_numstr - 1) * "@ ", color = :light_black)
 
+        # module
         if !isempty(modul)
             printstyled(io, modul, color = modulecolor)
             print(io, " ")
         end
 
+        # filepath
         pathparts = splitpath(file)
         for p in pathparts[1:end-1]
             printstyled(io, p * "/", color = :light_black)
         end
 
-        printstyled(io, pathparts[end], color = :light_black, bold = true)
-        printstyled(io, ":", color = :light_black)
-        printstyled(io, string(line), color = :light_black, bold = true)
+        # filename, separator, line
+        # bright black (90) and underlined (4)
+        print(io, "\033[90;4m$(pathparts[end] * ":" * string(line))\033[0m")
 
-        printstyled(io, ext, color = :light_black)
+        # inlined
+        printstyled(io, inlined ? "[i]" : "", color = :light_black)
 
         println(io)
         println(io)
