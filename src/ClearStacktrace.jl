@@ -8,7 +8,6 @@ const EXPAND_BASE_PATHS = Ref(true)
 const CONTRACT_USER_DIR = Ref(true)
 const REPLACE_BACKSLASHES = Ref(true)
 const _LAST_CONVERTED_TRACE = Ref{Any}(nothing)
-const MAX_SIGNATURE_CHARS = Ref(200)
 
 function expandbasepath(str)
 
@@ -99,7 +98,7 @@ end
 
 
 
-function printtrace(io::IO, converted_stacktrace; maxsigchars = MAX_SIGNATURE_CHARS[])
+function printtrace(io::IO, converted_stacktrace)
 
     files, lines, funcs, moduls, sigtypes, inlineds, arguments = converted_stacktrace
 
@@ -141,12 +140,12 @@ function printtrace(io::IO, converted_stacktrace; maxsigchars = MAX_SIGNATURE_CH
 
         println(io)
         
-        if !isempty(modul)
-            printstyled(io, " " ^ (length(num)-1) * "@ ", color = :light_black)
-        end
-        !isempty(modul) && printstyled(io, modul, color = modulecolor)
+        printstyled(io, " " ^ (length(num) - 1) * "@ ", color = :light_black)
 
-        print(io, " ")
+        if !isempty(modul)
+            printstyled(io, modul, color = modulecolor)
+            print(io, " ")
+        end
 
         pathparts = splitpath(file)
         for p in pathparts[1:end-1]
@@ -200,8 +199,7 @@ end
 
 function reprint_last(; full = true)
     if !isnothing(_LAST_CONVERTED_TRACE[])
-        printtrace(stdout, _LAST_CONVERTED_TRACE[];
-            maxsigchars = full ? typemax(Int) : MAX_SIGNATURE_CHARS[])
+        printtrace(stdout, _LAST_CONVERTED_TRACE[])
     end
 end
 
