@@ -166,7 +166,7 @@ function print_frame(io, i, func, inlined, modul, file, line, stypes,
     print(io, "\033[90;4m$(pathparts[end] * ":" * string(line))\033[0m")
 
     # inlined
-    printstyled(io, inlined ? "[i]" : "", color = :light_black)
+    printstyled(io, inlined ? " [inlined]" : "", color = :light_black)
 end
 
 
