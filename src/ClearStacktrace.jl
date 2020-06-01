@@ -114,57 +114,61 @@ function printtrace(io::IO, converted_stacktrace)
             zip(funcs, inlineds, moduls, files, lines, sigtypes, arguments))
 
         modulecolor = get(modulecolors, modul, :default)
-
-        # frame number
-        print(io, lpad("[" * string(i) * "]", length_numstr))
-        print(io, " ")
-        
-        # function name
-        printstyled(io, func, bold = true)
-       
-        # type signature
-        printstyled(io, "(", color = :light_black)
-
-        i = 1
-        for (stype, (varname, vartype)) in zip(stypes, args)
-            if i > 1
-                printstyled(io, ", ", color = :light_black)
-            end
-            printstyled(io, string(varname), color = :light_black, bold = true)
-            printstyled(io, "::")
-            printstyled(io, string(stype), color = :light_black)
-            i += 1
-        end
-
-        printstyled(io, ")", color = :light_black)
-
-        println(io)
-        
-        # @
-        printstyled(io, " " ^ (length_numstr - 1) * "@ ", color = :light_black)
-
-        # module
-        if !isempty(modul)
-            printstyled(io, modul, color = modulecolor)
-            print(io, " ")
-        end
-
-        # filepath
-        pathparts = splitpath(file)
-        for p in pathparts[1:end-1]
-            printstyled(io, p * "/", color = :light_black)
-        end
-
-        # filename, separator, line
-        # bright black (90) and underlined (4)
-        print(io, "\033[90;4m$(pathparts[end] * ":" * string(line))\033[0m")
-
-        # inlined
-        printstyled(io, inlined ? "[i]" : "", color = :light_black)
-
+        print_frame(io, i, func, inlined, modul, file, line, stypes, args, length_numstr, modulecolor)
         println(io)
         println(io)
     end
+end
+
+function print_frame(io, i, func, inlined, modul, file, line, stypes,
+        args, length_numstr, modulecolor)
+
+    # frame number
+    print(io, lpad("[" * string(i) * "]", length_numstr))
+    print(io, " ")
+    
+    # function name
+    printstyled(io, func, bold = true)
+   
+    # type signature
+    printstyled(io, "(", color = :light_black)
+
+    i = 1
+    for (stype, (varname, vartype)) in zip(stypes, args)
+        if i > 1
+            printstyled(io, ", ", color = :light_black)
+        end
+        printstyled(io, string(varname), color = :light_black, bold = true)
+        printstyled(io, "::")
+        printstyled(io, string(stype), color = :light_black)
+        i += 1
+    end
+
+    printstyled(io, ")", color = :light_black)
+
+    println(io)
+    
+    # @
+    printstyled(io, " " ^ (length_numstr - 1) * "@ ", color = :light_black)
+
+    # module
+    if !isempty(modul)
+        printstyled(io, modul, color = modulecolor)
+        print(io, " ")
+    end
+
+    # filepath
+    pathparts = splitpath(file)
+    for p in pathparts[1:end-1]
+        printstyled(io, p * "/", color = :light_black)
+    end
+
+    # filename, separator, line
+    # bright black (90) and underlined (4)
+    print(io, "\033[90;4m$(pathparts[end] * ":" * string(line))\033[0m")
+
+    # inlined
+    printstyled(io, inlined ? "[i]" : "", color = :light_black)
 end
 
 
