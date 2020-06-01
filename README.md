@@ -18,5 +18,4 @@ using ClearStacktrace
 
 Example with `ClearStacktrace.jl`:
 
-![after](img/after.png | width=577)
-
+<img src="img/after.png", width=577>
