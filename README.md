@@ -18,8 +18,5 @@ using ClearStacktrace
 
 Example with `ClearStacktrace.jl`:
 
-![after](img/after.png)
+![after](img/after.png | width=577)
 
-And the default stacktrace:
-
-![before](img/before.png)
