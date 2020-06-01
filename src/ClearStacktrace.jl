@@ -107,7 +107,6 @@ function printtrace(io::IO, converted_stacktrace)
     numbrackets = [lpad("[" * num, numwidth + 1) * "]" for num in numbers]
 
     exts = [inl ? " [i]" : "" for inl in inlineds]
-    funcs_w_ext = funcs .* exts
 
     uniquemodules = setdiff(unique(moduls), [""])
     modulecolors = Dict(u => c for (u, c) in
