@@ -1,15 +1,5 @@
 module ClearStacktrace
 
-const MODULECRAYONS = Ref(
-        [
-            crayon"blue",
-            crayon"yellow",
-            crayon"red",
-            crayon"green",
-            crayon"cyan",
-            crayon"magenta",
-        ]
-)
 
 MODULECOLORS = [:light_blue, :light_yellow, :light_green, :light_magenta, :light_cyan, 
 :light_red, :blue, :yellow, :green, :magenta, :cyan, :red]
