@@ -19,3 +19,21 @@ using ClearStacktrace
 Example with `ClearStacktrace.jl`:
 
 <img src="after.png" width="577">
+
+# Settings
+
+You can change these values to modify stack trace printing behavior:
+
+```julia
+# module name color cycler
+ClearStacktrace.MODULECOLORS[] = [:light_blue, :light_yellow, :light_red, :light_green, :light_magenta, :light_cyan, :blue, :yellow, :red, :green, :magenta, :cyan]
+
+# prints the full path for base files, making them much longer but clickable in VSCode, Atom, etc.
+ClearStacktrace.EXPAND_BASE_PATHS[] = true
+
+# prints ~ instead of the user directory
+ClearStacktrace.CONTRACT_USER_DIR[] = true
+
+# print line breaks between stack frames
+ClearStacktrace.LINEBREAKS[] = true
+```
