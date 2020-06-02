@@ -160,8 +160,9 @@ function print_frame(io, i, func, inlined, modul, file, line, stypes,
 
     # filepath
     pathparts = splitpath(file)
-    for p in pathparts[1:end-1]
-        printstyled(io, p * "/", color = :light_black)
+    folderparts = pathparts[1:end-1]
+    if !isempty(folderparts)
+        printstyled(io, joinpath(folderparts...), color = :light_black)
     end
 
     # filename, separator, line
