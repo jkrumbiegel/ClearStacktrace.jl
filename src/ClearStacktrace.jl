@@ -5,7 +5,6 @@ const MODULECOLORS = [:light_blue, :light_yellow, :light_red, :light_green, :lig
 
 const EXPAND_BASE_PATHS = Ref(true)
 const CONTRACT_USER_DIR = Ref(true)
-const REPLACE_BACKSLASHES = Ref(true)
 const LINEBREAKS = Ref(true)
 
 function expandbasepath(str)
@@ -29,10 +28,6 @@ function replaceuserpath(str)
     replace(str1, lowercasefirst(homedir()) => "~")
 end
 
-function replacebackslashes(str)
-    replace(str, raw"\\" => '/')
-end
-
 getline(frame) = frame.line
 function getfile(frame)
     file = string(frame.file)
@@ -41,9 +36,6 @@ function getfile(frame)
     end
     if CONTRACT_USER_DIR[]  
         file = replaceuserpath(file)
-    end
-    if REPLACE_BACKSLASHES[]
-        file = replacebackslashes(file)
     end
 
     file
@@ -162,7 +154,7 @@ function print_frame(io, i, func, inlined, modul, file, line, stypes,
     pathparts = splitpath(file)
     folderparts = pathparts[1:end-1]
     if !isempty(folderparts)
-        printstyled(io, joinpath(folderparts...), color = :light_black)
+        printstyled(io, joinpath(folderparts...) * (Sys.iswindows() ? "\\" : "/"), color = :light_black)
     end
 
     # filename, separator, line
