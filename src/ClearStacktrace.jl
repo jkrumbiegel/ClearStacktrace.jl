@@ -106,9 +106,9 @@ function printtrace(io::IO, converted_stacktrace)
 
         modulecolor = get(modulecolors, modul, :default)
         print_frame(io, i, func, inlined, modul, file, line, stypes, args, length_numstr, modulecolor)
-        println(io)
-        if LINEBREAKS[]
+        if i < n
             println(io)
+            LINEBREAKS[] && println(io)
         end
     end
 end
@@ -127,15 +127,13 @@ function print_frame(io, i, func, inlined, modul, file, line, stypes,
         # type signature
         printstyled(io, "(", color = :light_black)
 
-        i = 1
-        for (stype, (varname, vartype)) in zip(stypes, args)
+        for (i, (stype, (varname, vartype))) in enumerate(zip(stypes, args))
             if i > 1
                 printstyled(io, ", ", color = :light_black)
             end
             printstyled(io, string(varname), color = :light_black, bold = true)
             printstyled(io, "::")
             printstyled(io, string(stype), color = :light_black)
-            i += 1
         end
 
         printstyled(io, ")", color = :light_black)
