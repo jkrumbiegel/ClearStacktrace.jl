@@ -123,21 +123,23 @@ function print_frame(io, i, func, inlined, modul, file, line, stypes,
     # function name
     printstyled(io, func, bold = true)
    
-    # type signature
-    printstyled(io, "(", color = :light_black)
+    if !isempty(args)
+        # type signature
+        printstyled(io, "(", color = :light_black)
 
-    i = 1
-    for (stype, (varname, vartype)) in zip(stypes, args)
-        if i > 1
-            printstyled(io, ", ", color = :light_black)
+        i = 1
+        for (stype, (varname, vartype)) in zip(stypes, args)
+            if i > 1
+                printstyled(io, ", ", color = :light_black)
+            end
+            printstyled(io, string(varname), color = :light_black, bold = true)
+            printstyled(io, "::")
+            printstyled(io, string(stype), color = :light_black)
+            i += 1
         end
-        printstyled(io, string(varname), color = :light_black, bold = true)
-        printstyled(io, "::")
-        printstyled(io, string(stype), color = :light_black)
-        i += 1
-    end
 
-    printstyled(io, ")", color = :light_black)
+        printstyled(io, ")", color = :light_black)
+    end
 
     println(io)
     
