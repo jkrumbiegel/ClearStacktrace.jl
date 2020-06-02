@@ -1,7 +1,7 @@
 name = "ClearStacktrace"
 uuid = "710b7bb7-6527-48f4-8ff2-df22ae1c6308"
 authors = ["Julius Krumbiegel"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 
