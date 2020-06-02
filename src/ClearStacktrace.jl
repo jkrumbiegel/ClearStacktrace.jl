@@ -6,6 +6,7 @@ const MODULECOLORS = [:light_blue, :light_yellow, :light_red, :light_green, :lig
 const EXPAND_BASE_PATHS = Ref(true)
 const CONTRACT_USER_DIR = Ref(true)
 const REPLACE_BACKSLASHES = Ref(true)
+const LINEBREAKS = Ref(true)
 
 function expandbasepath(str)
 
@@ -114,7 +115,9 @@ function printtrace(io::IO, converted_stacktrace)
         modulecolor = get(modulecolors, modul, :default)
         print_frame(io, i, func, inlined, modul, file, line, stypes, args, length_numstr, modulecolor)
         println(io)
-        println(io)
+        if LINEBREAKS[]
+            println(io)
+        end
     end
 end
 
