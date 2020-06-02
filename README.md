@@ -3,22 +3,21 @@
 [![Build Status](https://travis-ci.com/jkrumbiegel/ClearStacktrace.jl.svg?branch=master)](https://travis-ci.com/jkrumbiegel/ClearStacktrace.jl)
 [![Codecov](https://codecov.io/gh/jkrumbiegel/ClearStacktrace.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jkrumbiegel/ClearStacktrace.jl)
 
-An experimental package that hooks into `Base.show_backtrace` and replaces normal StackTrace printing behavior with a clearer version that uses alignment and colors to reduce visual clutter and indicate module boundaries, and expands base paths so they are clickable.
+# Summary
 
-All you have to do is install the package via
+`ClearStacktrace.jl` is an experimental package that replaces `Base.show_backtrace` with a clearer version that uses alignment and colors to reduce visual clutter and indicate module boundaries, and expands base paths so they are clickable.
+
+# Installation
 
 ```julia
 ] add ClearStacktrace
 ```
 
-and then execute:
+# Usage
+
 ```julia
 using ClearStacktrace
 ```
-
-Example with `ClearStacktrace.jl`:
-
-<img src="after.png" width="577">
 
 # Settings
 
@@ -37,3 +36,7 @@ ClearStacktrace.CONTRACT_USER_DIR[] = true
 # print line breaks between stack frames
 ClearStacktrace.LINEBREAKS[] = true
 ```
+
+# Example
+
+<img src="after.png" width="577">
